@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Date Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        label, input, button {
+            display: block;
+            margin: 10px auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #155724;
+            background-color: #d4edda;
+            border: 2px solid #c3e6cb;
+            display: none;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #holidayList {
+            margin-top: 15px;
+            padding: 10px;
+            text-align: left;
+            display: inline-block;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px 20px;
+        }
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Feedback Date Calculator</h1>
+    <label for="deadline">Deadline Date:</label>
+    <input type="date" id="deadline">
+    <button onclick="calculateFeedbackDate()">Calculate Feedback Date</button>
+
+    <h3>Non-Working Days (Excluding Weekends)</h3>
+    <ul id="holidayList"></ul>
+
+    <h3>Customize Non-Working Days</h3>
+    <input type="date" id="customHoliday">
+    <button onclick="addCustomHoliday()">Add Non-Working Day</button>
+
+    <ul id="customHolidaysList"></ul>
+
+    <div id="result"></div>
+
+    <script>
+        let customHolidays = [];
+
+        const predefinedHolidays = [
+            new Date('2025-01-01'), // New Year's Day
+            new Date('2025-04-18'), // Good Friday
+            new Date('2025-04-21'), // Easter Monday
+            new Date('2025-05-05'), // Early May bank holiday
+            new Date('2025-05-26'), // Spring bank holiday
+            new Date('2025-08-25'), // Summer bank holiday
+            new Date('2025-12-25'), // Christmas Day
+            new Date('2025-12-26')  // Boxing Day
+        ];
+
+        function calculateFeedbackDate() {
+            const deadlineInput = document.getElementById('deadline').value;
+            if (!deadlineInput) {
+                alert('Please select a deadline date.');
+                return;
+            }
+
+            const deadlineDate = new Date(deadlineInput);
+            const feedbackDate = addWorkingDays(deadlineDate, 15);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = `📅 Feedback Date: ${feedbackDate.toLocaleDateString('en-GB', options)}`;
+            resultDiv.style.display = 'block';
+            resultDiv.classList.add('fade-in');  
+        }
+
+        function addWorkingDays(startDate, daysToAdd) {
+            const allHolidays = predefinedHolidays.concat(customHolidays);
+
+            let currentDate = new Date(startDate);
+            let addedDays = 0;
+
+            while (addedDays < daysToAdd) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                if (isWorkingDay(currentDate, allHolidays)) {
+                    addedDays++;
+                }
+            }
+
+            return currentDate;
+        }
+
+        function isWorkingDay(date, holidays) {
+            const day = date.getDay();
+            const isWeekend = (day === 0 || day === 6);
+            const isHoliday = holidays.some(holiday => 
+                holiday.getDate() === date.getDate() &&
+                holiday.getMonth() === date.getMonth() &&
+                holiday.getFullYear() === date.getFullYear()
+            );
+            return !isWeekend && !isHoliday;
+        }
+
+        function addCustomHoliday() {
+            const holidayInput = document.getElementById('customHoliday').value;
+            if (!holidayInput) {
+                alert("Please select a date.");
+                return;
+            }
+
+            const holidayDate = new Date(holidayInput);
+            if (customHolidays.some(h => h.getTime() === holidayDate.getTime())) {
+                alert("This date is already added as a non-working day.");
+                return;
+            }
+
+            customHolidays.push(holidayDate);
+            updateHolidayList();
+        }
+
+        function updateHolidayList() {
+            const list = document.getElementById('customHolidaysList');
+            list.innerHTML = '';
+            customHolidays.sort((a, b) => a - b); // Sort dates for better organization
+
+            customHolidays.forEach((holiday, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = holiday.toLocaleDateString('en-GB');
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '✖';
+                removeButton.style.marginLeft = '5px';
+                removeButton.style.cursor = 'pointer';
+                removeButton.style.border = 'none';
+                removeButton.style.background = 'transparent';
+                removeButton.style.color = 'red';
+                removeButton.style.fontSize = '14px';
+                removeButton.onclick = () => removeCustomHoliday(index);
+
+                listItem.appendChild(removeButton);
+                list.appendChild(listItem);
+            });
+        }
+
+        function removeCustomHoliday(index) {
+            customHolidays.splice(index, 1);
+            updateHolidayList();
+        }
+
+        function displayPredefinedHolidays() {
+            const list = document.getElementById('holidayList');
+            list.innerHTML = '';
+
+            predefinedHolidays.forEach(holiday => {
+                if (!isWeekend(holiday)) { // Only show non-weekend holidays
+                    const listItem = document.createElement('li');
+                    listItem.textContent = holiday.toLocaleDateString('en-GB');
+                    list.appendChild(listItem);
+                }
+            });
+        }
+
+        function isWeekend(date) {
+            const day = date.getDay();
+            return day === 0 || day === 6;
+        }
+
+        // Load predefined holidays when the page opens
+        window.onload = displayPredefinedHolidays;
+    </script>
+</body>
+</html>
